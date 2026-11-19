@@ -432,7 +432,7 @@ const Dashboard = () => {
                                 </Space>
                               </div>
                             </div>
-                            <Space size="small">
+                            <Space size="small" style={{ alignItems: 'center', flexShrink: 0 }}>
                               <Tooltip title="Start Testing">
                                 <Button 
                                   type="primary" 
@@ -442,11 +442,21 @@ const Dashboard = () => {
                                     width: '36px',
                                     height: '36px',
                                     minWidth: '36px',
+                                    maxWidth: '36px',
+                                    minHeight: '36px',
+                                    maxHeight: '36px',
+                                    aspectRatio: '1 / 1',
                                     borderRadius: '50%',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    padding: 0
+                                    padding: 0,
+                                    paddingBlock: 0,
+                                    paddingInline: 0,
+                                    flex: '0 0 36px',
+                                    flexShrink: 0,
+                                    lineHeight: 1,
+                                    boxSizing: 'border-box'
                                   }}
                                   onClick={() => handleRunTest(file.id)}
                                 />
