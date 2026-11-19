@@ -1,34 +1,17 @@
-**Fix Critical Multi-User Data Isolation Bug in APIForge**
+My FastAPI backend is connected to Supabase PostgreSQL, and Alembic migration `e15cc4612a77 (initial_schema)` has been applied successfully, but no tables are visible in Supabase Table Editor.
 
-There is a critical account isolation issue in APIForge.
+Please fix this issue.
 
-When I log in with Account A and perform API testing, then log out and log in with Account B, Account A's previous API testing data is visible in Account B.
+1. Inspect all existing SQLAlchemy models.
+2. Check whether all models are imported into Alembic's `env.py`.
+3. Check `Base.metadata` and the Alembic migration file.
+4. Verify that the initial migration actually contains `op.create_table()` operations.
+5. Verify that Alembic is connected to my Supabase database, not local PostgreSQL.
+6. Fix the migration so all required tables are created in Supabase.
+7. Preserve existing data and avoid duplicate tables.
+8. Run or provide the correct migration commands.
+9. Verify that the tables appear in the Supabase `public` schema.
 
-I need you to investigate and fix this issue across the entire application.
+Do not redesign or modify my React frontend. Do not use mock data or SQLite.
 
-**Requirements:**
-
-1. Inspect the complete authentication flow and database schema.
-2. Ensure every user's API collections, requests, test results, execution history, environments, saved configurations and other private resources are associated with their authenticated user ID.
-3. Update all backend database queries to retrieve, create, update and delete records only within the authenticated user's ownership.
-4. Never trust user_id provided by frontend requests. Derive identity from validated authentication credentials.
-5. On logout, clear previous account's cached data, application state and user-specific local storage.
-6. On login, fetch fresh data belonging exclusively to the newly authenticated account.
-7. Protect individual resource endpoints against IDOR (Insecure Direct Object Reference) vulnerabilities.
-8. Ensure one user cannot read, update or delete another user's resources by manipulating resource IDs.
-9. Review all frontend API calls and backend endpoints for missing user-level filtering.
-
-**Testing requirements:**
-- Create two separate test accounts.
-- Perform API testing using Account A.
-- Log out and log in using Account B.
-- Verify that Account B cannot see Account A's collections, requests, history or results.
-- Try accessing Account A's resource IDs through Account B.
-- Verify unauthorized access is rejected.
-- Log back into Account A and verify its original data remains intact.
-
-**Important:** Do not simply hide previous data in the frontend. Fix the actual backend authorization and database-level ownership issues.
-
-Preserve the existing UI, functionality and architecture. Do not unnecessarily rewrite working features.
-
-First identify the root cause, then implement the fix and test the complete authentication and data-isolation flow.
+Explain what was wrong and what you fixed.
