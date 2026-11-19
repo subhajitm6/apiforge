@@ -79,7 +79,7 @@ const TestReport = () => {
   };
 
   const handleDownloadPdf = () => {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const baseUrl = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://apiforge-backend-d8py.onrender.com' : '');
     window.open(`${baseUrl}/api/test-report/${id}/download`, '_blank');
   };
 

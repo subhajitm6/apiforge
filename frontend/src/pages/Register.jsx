@@ -34,13 +34,24 @@ const Register = () => {
       navigate('/dashboard');
     } catch (err) {
       console.error('Registration failed', err);
-      if (err.response?.data?.errors) {
-        Object.values(err.response.data.errors).forEach(errs => {
-          errs.forEach(msg => message.error(msg));
-        });
-      } else {
-        message.error(err.response?.data?.message || 'Registration failed. Please try again.');
+      let errorMsg = '';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          errorMsg = detail.map(d => (d.msg ? `${d.loc?.slice(-1)[0] || 'Field'}: ${d.msg}` : JSON.stringify(d))).join(', ');
+        } else if (typeof detail === 'object') {
+          errorMsg = Object.entries(detail).map(([key, val]) => Array.isArray(val) ? `${key}: ${val.join(', ')}` : `${key}: ${val}`).join(' | ');
+        }
+      } else if (err.response?.data?.errors) {
+        errorMsg = Object.values(err.response.data.errors).flat().join(', ');
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = `${err.message}. Please check if the backend server is reachable.`;
       }
+      message.error(errorMsg || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

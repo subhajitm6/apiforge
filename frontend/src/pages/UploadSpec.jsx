@@ -46,7 +46,7 @@ const UploadSpec = () => {
   const uploadProps = {
     name: 'file',
     multiple: false,
-    action: `${import.meta.env.VITE_API_URL || ''}/api/upload`,
+    action: `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://apiforge-backend-d8py.onrender.com' : '')}/api/upload`,
     headers: {
       Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
     },

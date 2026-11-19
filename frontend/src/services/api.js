@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Dynamically read from environment variable or fallback to current host/port
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://apiforge-backend-d8py.onrender.com' : 'http://localhost:8000');
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,

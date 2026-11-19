@@ -9,8 +9,8 @@ import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
-// Set global base URL for axios from environment
-const API_URL = import.meta.env.VITE_API_URL || '';
+// Set global base URL for axios from environment with production fallback
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://apiforge-backend-d8py.onrender.com' : 'http://localhost:8000');
 axios.defaults.baseURL = API_URL;
 
 ReactDOM.createRoot(document.getElementById('root')).render(

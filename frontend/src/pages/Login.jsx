@@ -31,7 +31,22 @@ const Login = () => {
       navigate('/dashboard');
     } catch (err) {
       console.error('Login failed', err);
-      message.error(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      let errorMsg = '';
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          errorMsg = detail.map(d => (d.msg ? `${d.loc?.slice(-1)[0] || 'Field'}: ${d.msg}` : JSON.stringify(d))).join(', ');
+        } else if (typeof detail === 'object') {
+          errorMsg = Object.entries(detail).map(([key, val]) => Array.isArray(val) ? `${key}: ${val.join(', ')}` : `${key}: ${val}`).join(' | ');
+        }
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = `${err.message}. Please check if the backend server is reachable.`;
+      }
+      message.error(errorMsg || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
