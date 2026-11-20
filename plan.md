@@ -1,31 +1,18 @@
-My APIForge application is deployed on Render.
+My APIForge application is deployed and working correctly. API testing succeeds, and the report appears on the dashboard. However, when I refresh the dashboard or report page, I get a 404 Not Found error.
 
-Frontend: https://apiforge-xgbt.onrender.com
-Backend: https://apiforge-backend-d8py.onrender.com
+## Investigation & Solution
 
-Problem: When I create a new user account, the frontend displays "Registration failed. Please try again."
-
-## Investigation & Solution Summary
-
-1. [x] **Inspect the React registration component and its API request:**
-   - [Register.jsx](file:///e:/myworld/api-test-automation/frontend/src/pages/Register.jsx#L25-L48) sends `POST /api/register` with `{ name, email, password, confirm, password_confirmation }`.
-2. [x] **Verify that the frontend uses the deployed backend URL, not localhost:**
-   - Added production fallback to `https://apiforge-backend-d8py.onrender.com` in [main.jsx](file:///e:/myworld/api-test-automation/frontend/src/main.jsx) and [api.js](file:///e:/myworld/api-test-automation/frontend/src/services/api.js).
-   - Created [frontend/.env.production](file:///e:/myworld/api-test-automation/frontend/.env.production) with `VITE_API_URL=https://apiforge-backend-d8py.onrender.com`.
-3. [x] **Check the registration API endpoint and HTTP method:**
-   - Verified FastAPI backend route `POST /api/register` in [auth.py](file:///e:/myworld/api-test-automation/backend/app/routers/auth.py).
-4. [x] **Verify request payload fields match the FastAPI Pydantic schema:**
-   - [UserCreate](file:///e:/myworld/api-test-automation/backend/app/schemas/user.py) expects `name`, `email`, `password`, and optional `password_confirmation`, matching the frontend payload.
-5. [x] **Check CORS configuration for the deployed frontend domain:**
-   - **Root Cause Identified**: The browser sent an HTTP `OPTIONS` preflight from `https://apiforge-xgbt.onrender.com` which the backend rejected with `HTTP 400: Disallowed CORS origin` because the deployed frontend origin was not configured in `CORS_ORIGINS`.
-   - **Fix**: Added `https://apiforge-xgbt.onrender.com` and `allow_origin_regex=r"https://.*\.onrender\.com"` to [main.py](file:///e:/myworld/api-test-automation/backend/app/main.py#L18-L24) and dynamic origin parsing in [config.py](file:///e:/myworld/api-test-automation/backend/app/core/config.py#L16-L65).
-6. [x] **Verify Supabase PostgreSQL connectivity and whether the users table exists:**
-   - Verified live Supabase PostgreSQL connectivity; table `users` exists with all columns and records.
-7. [x] **Check password hashing and user creation logic:**
-   - Verified passlib/bcrypt password hashing and JWT token issuance. Direct API test returned `HTTP 201 Created` with valid JWT token and user record.
-8. [x] **Display actual backend error in development instead of hiding it behind generic message:**
-   - Enhanced error handling in [Register.jsx](file:///e:/myworld/api-test-automation/frontend/src/pages/Register.jsx#L35-L53) and [Login.jsx](file:///e:/myworld/api-test-automation/frontend/src/pages/Login.jsx#L32-L50) to extract `err.response.data.detail` (string, list, or dict) and surface connection/CORS network errors directly to the user.
-9. [x] **Fix root cause without changing existing UI design:**
-   - Existing UI design, styling, and animations remained 100% intact.
-10. [x] **Test registration and confirm that a new user is saved in Supabase:**
-   - Tested registration flow; verified user record persistence in Supabase PostgreSQL pooler.
+1. [x] **Inspect React Router configuration and deployed frontend routing:**
+   - React Router is configured with HTML5 history routing (`BrowserRouter`). Routes like `/dashboard`, `/reports`, `/report/:id`, etc., work during in-app link navigation, but direct requests or browser refresh (F5) hit the static web server directly.
+2. [x] **Ensure page refresh works on all routes:**
+   - Addressed by configuring SPA route rewrites to `index.html` and generating `404.html` fallback.
+3. [x] **Check whether the 404 is coming from Render static hosting or the backend API:**
+   - Tested directly via HTTP request to `https://apiforge-xgbt.onrender.com/dashboard`.
+   - Result: `HTTP 404 Not Found` returned with headers from Render/Cloudflare (`rndr-id: e46b3caf-4158-4bd6`). The 404 is from Render's static web server because no physical file named `dashboard` exists in `dist/`.
+4. [x] **Configure Render to redirect unknown frontend routes to index.html:**
+   - Created [render.yaml](file:///e:/myworld/api-test-automation/render.yaml) with `routes: - type: rewrite, source: /*, destination: /index.html`.
+   - Added [copy-404.js](file:///e:/myworld/api-test-automation/frontend/copy-404.js) and integrated it into `frontend/package.json` build command (`vite build && node copy-404.js`) so `dist/404.html` is automatically created as an exact SPA fallback for static hosts.
+5. [x] **Preserve existing UI design and functionality:**
+   - All components, layouts, styles, and API interactions remain 100% intact.
+6. [x] **Verified build:**
+   - Verified that `npm run build` generates `dist/index.html` and `dist/404.html` cleanly.
