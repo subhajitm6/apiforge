@@ -13,6 +13,8 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import NotFound from './pages/NotFound';
+import { useAuth } from './context/AuthContext';
 
 const { Content } = Layout;
 
@@ -33,6 +35,7 @@ const MainLayout = ({ children }) => {
 
 function App() {
   const { isDark } = useTheme();
+  const { token } = useAuth();
 
   return (
     <ConfigProvider
@@ -128,9 +131,12 @@ function App() {
           element={<MainLayout><Profile /></MainLayout>} 
         />
 
-        {/* Redirect root to dashboard */}
-        <Route path="/" element={<Login />} />
-        <Route path="*" element={<Login />} />
+        {/* Root Route: Dashboard if authenticated, else Login */}
+        <Route path="/" element={token ? <MainLayout><Dashboard /></MainLayout> : <Login />} />
+
+        {/* Error / 404 Pages: captures all wrong / unmatched URLs */}
+        <Route path="/404" element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </ConfigProvider>
   );
