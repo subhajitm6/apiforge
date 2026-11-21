@@ -10,7 +10,14 @@ from app.models.test_result import TestResult
 from app.utils.validators import is_safe_url
 
 class ApiTestEngine:
-    async def execute_run(self, file_spec: ApiSpec, user_id: int, db: Session) -> TestRun:
+    async def execute_run(
+        self,
+        file_spec: ApiSpec,
+        user_id: int,
+        db: Session,
+        test_id: str = None,
+        auth_token: str = None
+    ) -> TestRun:
         endpoints = db.query(ApiEndpoint).filter(ApiEndpoint.file_id == file_spec.id).all()
         
         test_run = TestRun(
@@ -36,14 +43,23 @@ class ApiTestEngine:
             pass
 
         timeout = httpx.Timeout(10.0, connect=5.0)
+        
+        # Track dynamically discovered resource IDs from GET responses (e.g. from /comments)
+        discovered_id = str(test_id).strip() if test_id else None
 
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
             for ep in endpoints:
                 start_time = time.perf_counter()
                 
-                # Format URL and substitute path parameters like {id} with sample ID (e.g. 1)
+                # Format URL and substitute path parameters like {id} with user-provided test_id or sample ID
                 import re
-                endpoint_str = re.sub(r'\{[a-zA-Z0-9_]+\}', '1', ep.endpoint.strip())
+                replacement_id = discovered_id
+                if not replacement_id and ep.request_body and isinstance(ep.request_body, dict):
+                    replacement_id = ep.request_body.get("id") or ep.request_body.get("uuid")
+                if not replacement_id:
+                    replacement_id = "1"
+
+                endpoint_str = re.sub(r'\{[a-zA-Z0-9_]+\}', str(replacement_id), ep.endpoint.strip())
                 if endpoint_str.startswith("http://") or endpoint_str.startswith("https://"):
                     full_url = endpoint_str
                 elif default_base:
@@ -84,9 +100,14 @@ class ApiTestEngine:
                     continue
 
                 try:
-                    headers = ep.headers or {}
-                    # Scrub potential sensitive tokens if forwarding
-                    headers.pop("Authorization", None)
+                    headers = dict(ep.headers or {})
+                    if auth_token:
+                        headers["Authorization"] = f"Bearer {auth_token}" if not auth_token.startswith("Bearer ") else auth_token
+                    else:
+                        # Strip dummy/placeholder tokens so public reads don't fail with 401
+                        auth_val = str(headers.get("Authorization", ""))
+                        if any(ph in auth_val for ph in ["<token>", "YOUR_TOKEN", "your_token", "Bearer token"]):
+                            headers.pop("Authorization", None)
 
                     req_kwargs = {
                         "headers": headers,
@@ -107,6 +128,17 @@ class ApiTestEngine:
                     resp_body = None
                     try:
                         resp_body = response.json()
+                        # If no test_id was given, auto-discover resource ID from GET list responses for subsequent tests
+                        if not test_id and ep.method.upper() == "GET" and actual_status == 200:
+                            items = None
+                            if isinstance(resp_body, list):
+                                items = resp_body
+                            elif isinstance(resp_body, dict):
+                                items = resp_body.get("data") or resp_body.get("items") or resp_body.get("results")
+                            if items and isinstance(items, list) and len(items) > 0 and isinstance(items[0], dict):
+                                discovered_id = items[0].get("id") or items[0].get("uuid")
+                    except Exception:
+                        resp_body = response.text
                     except Exception:
                         resp_body = {"text": response.text[:2000]}
 

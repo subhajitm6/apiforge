@@ -100,6 +100,7 @@ def get_spec_preview(
     }
 
 @router.post("/upload/{spec_id}/confirm")
+@router.put("/upload/{spec_id}")
 def confirm_customized_spec(
     spec_id: int,
     customized_data: Dict[str, Any] = Body(...),

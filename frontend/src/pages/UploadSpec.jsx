@@ -15,7 +15,9 @@ import {
   GlobalOutlined,
   SafetyCertificateOutlined,
   CheckCircleFilled,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  KeyOutlined,
+  LockOutlined
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +41,8 @@ const UploadSpec = () => {
   const [previewSpec, setPreviewSpec] = useState(null);
   const [editingBaseUrl, setEditingBaseUrl] = useState('');
   const [endpoints, setEndpoints] = useState([]);
+  const [sampleId, setSampleId] = useState('');
+  const [bearerToken, setBearerToken] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentEditingEndpoint, setCurrentEditingEndpoint] = useState(null);
   const [editForm] = Form.useForm();
@@ -142,6 +146,18 @@ const UploadSpec = () => {
     handleEditEndpoint(newEp);
   };
 
+  const handleApplyIdToAll = () => {
+    if (!sampleId.trim()) {
+      message.warning('Please enter an ID to apply to endpoints.');
+      return;
+    }
+    setEndpoints(prev => prev.map(ep => ({
+      ...ep,
+      path: ep.path.replace(/\{[a-zA-Z0-9_]+\}/g, sampleId.trim())
+    })));
+    message.success(`Applied ID "${sampleId.trim()}" to matching endpoint paths.`);
+  };
+
   const handleConfirmAndRun = async () => {
     if (!uploadedFileId) return;
     setProcessing(true);
@@ -158,8 +174,11 @@ const UploadSpec = () => {
         }))
       });
 
-      // 2. Execute tests
-      const res = await axios.post(`/api/run-test/${uploadedFileId}`);
+      // 2. Execute tests with custom sample ID and Bearer token
+      const res = await axios.post(`/api/run-test/${uploadedFileId}`, {
+        test_id: sampleId.trim() || undefined,
+        auth_token: bearerToken.trim() || undefined
+      });
       setTestRunId(res.data.run.id);
       setProcessing(false);
       setCurrentStep(2);
@@ -343,6 +362,50 @@ const UploadSpec = () => {
                       </Space>
                     </div>
                   )}
+                </Col>
+
+                {/* Resource ID / Path Parameter & Auth Token */}
+                <Col xs={24} md={12}>
+                  <Divider style={{ margin: '14px 0 10px 0', borderColor: 'var(--border-color)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <Text type="secondary" style={{ fontSize: '12px', fontWeight: 600 }}>
+                      TEST ID / PATH PARAMETER (Replaces {`{id}`})
+                    </Text>
+                    {sampleId && (
+                      <Button size="small" type="link" onClick={handleApplyIdToAll} style={{ padding: 0, height: 'auto', fontSize: '12px' }}>
+                        Apply to {`{id}`} paths
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    prefix={<KeyOutlined style={{ color: 'var(--primary-color)' }} />}
+                    value={sampleId}
+                    onChange={(e) => setSampleId(e.target.value)}
+                    placeholder="e.g. 019e37fd-2ec0-712c-92fc-a5c970f7f257 or 1"
+                    size="large"
+                    style={{ borderRadius: '8px' }}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: '4px', color: 'var(--text-muted)' }}>
+                    Replaces route path variables like {`{id}`} during automated testing.
+                  </Text>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Divider style={{ margin: '14px 0 10px 0', borderColor: 'var(--border-color)' }} />
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                    BEARER TOKEN (Optional, for write operations)
+                  </Text>
+                  <Input.Password
+                    prefix={<LockOutlined style={{ color: 'var(--primary-color)' }} />}
+                    value={bearerToken}
+                    onChange={(e) => setBearerToken(e.target.value)}
+                    placeholder="Enter API token for authenticated requests"
+                    size="large"
+                    style={{ borderRadius: '8px' }}
+                  />
+                  <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: '4px', color: 'var(--text-muted)' }}>
+                    Sent in Authorization: Bearer &lt;token&gt; header for POST/PATCH/DELETE tests.
+                  </Text>
                 </Col>
               </Row>
             </Card>

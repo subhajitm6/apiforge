@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,6 +14,7 @@ router = APIRouter(prefix="", tags=["Test Execution"])
 @router.post("/run-test/{file_id}")
 async def run_test(
     file_id: int,
+    payload: Optional[Dict[str, Any]] = Body(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -24,7 +26,16 @@ async def run_test(
             detail="Specification file not found"
         )
 
-    test_run = await api_test_engine.execute_run(file_record, user.id, db)
+    test_id = (payload or {}).get("test_id")
+    auth_token = (payload or {}).get("auth_token")
+
+    test_run = await api_test_engine.execute_run(
+        file_record,
+        user.id,
+        db,
+        test_id=test_id,
+        auth_token=auth_token
+    )
 
     # Serialize matching the Laravel response format:
     # { message: '...', run: { ..., results: [ { ..., api_test: { ... } } ] } }
